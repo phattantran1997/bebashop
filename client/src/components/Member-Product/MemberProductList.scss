@@ -1,0 +1,168 @@
+/* AdminmemberList.scss */
+
+.member-product-list-container {
+    // max-width: 800px;
+    // margin: 0 auto;
+    // padding: 20px;
+}
+
+.add-member-section {
+    margin-bottom: 20px;
+}
+
+.add-member-section label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.add-member-section input {
+    width: calc(100% - 10px);
+    /* Adjust width as needed */
+    padding: 8px;
+    margin-bottom: 10px;
+}
+
+.add-member-section button {
+    padding: 8px 16px;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.add-member-section button:hover {
+    background-color: #45a049;
+}
+
+.member-product-list table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.member-product-list th,
+.member-product-list td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.member-product-list th {
+    background-color: #f2f2f2;
+}
+
+.member-product-list tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+.member-product-list tr:hover {
+    background-color: #ddd;
+}
+
+.member-product-list button {
+    padding: 8px 16px;
+    background-color: #f44336;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.member-product-list button:hover {
+    background-color: #d32f2f;
+}
+
+.member-details-form {
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  h2 {
+    margin-bottom: 20px;
+    color: #333;
+    font-size: 1.2em;
+  }
+
+  .member-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+
+    .info-group {
+      display: flex;
+      align-items: baseline;
+      
+      label {
+        font-weight: bold;
+        margin-right: 10px;
+        min-width: 140px;
+        color: #666;
+      }
+
+      span {
+        color: #333;
+      }
+    }
+  }
+}
+
+#memberSelect {
+    /* Kích thước và padding */
+    min-width: 200px;
+    padding: 8px 12px;
+    
+    /* Border và border-radius */
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    
+    /* Font và màu chữ */
+    font-size: 14px;
+    color: #333;
+    
+    /* Background */
+    background-color: white;
+    
+    /* Hiệu ứng hover */
+    transition: all 0.2s ease-in-out;
+  }
+  
+  #memberSelect:hover {
+    border-color: #888;
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+  }
+  
+  #memberSelect:focus {
+    outline: none;
+    border-color: #4a90e2;
+    box-shadow: 0 0 5px rgba(74,144,226,0.3);
+  }
+  
+  /* Style cho options bên trong select */
+  #memberSelect option {
+    padding: 8px;
+    font-size: 14px;
+  }
+
+.tables-container {
+  margin-top: 20px;
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    
+    th, td {
+      padding: 8px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+    
+    th {
+      background-color: #f4f4f4;
+    }
+    
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+  }
+}

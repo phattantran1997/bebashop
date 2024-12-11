@@ -1,0 +1,17 @@
+@host = http://localhost:3003
+
+GET {{host}}/api/member-products/2
+
+###
+POST {{host}}/api/member-products/create
+Content-Type: application/json
+
+{
+    "memberId": 2,
+    "productId": 1,
+    "price": 100000,
+    "discount": 10
+}
+
+###
+DELETE {{host}}/api/member-products/delete/2/1 

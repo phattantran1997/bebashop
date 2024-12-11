@@ -1,0 +1,12 @@
+env server:
+# if you have local mysql setup make this flag true
+PORT=3002
+# Update ABCD with respective values from DB_SERVER_DATABASE
+# You dont need all this variable for local setup
+DB_SERVER_USER=root
+DB_SERVER_HOST=localhost
+DB_SERVER_PASSWORD=12345678
+DB_SERVER_DATABASE=beba_shop
+# Add config keys as per your app
+JWT_SECRET_KEY_ACCESS_TOKEN=ACCESS
+JWT_SECRET_KEY_REFRESH_TOKEN=REFRESH

@@ -38,3 +38,14 @@ exports.loginByPhoneNumber = (req, res) => {
             res.status(500).send("Error logging in with phone number.");
         });
 };
+
+exports.getAllUsers = (req, res) => {
+    userModel.getAllUsers()
+        .then(result => {
+            res.send(result);
+        })
+        .catch(err => {
+            console.error(err.message);
+            res.status(500).send("Error fetching users.");
+        });
+};

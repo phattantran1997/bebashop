@@ -12,5 +12,6 @@ router.post("/register", userController.register);
 router.post("/login", userController.login);
 
 router.post("/login-by-phone", userController.loginByPhoneNumber);
+router.get("/all", userController.getAllUsers);
 
 module.exports = router;

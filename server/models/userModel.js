@@ -132,3 +132,18 @@ exports.loginByPhoneNumber = (phoneNumber) => {
         );
     });
 };
+
+exports.getAllUsers = () => {
+    return new Promise((resolve, reject) => {
+        pool.query(
+            "SELECT userId, email, isAdmin, fname, lname, phoneNumber FROM users",
+            (err, results) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(results);
+                }
+            }
+        );
+    });
+};

@@ -63,3 +63,25 @@ CREATE TABLE productsInOrder (
     FOREIGN KEY (orderId) REFERENCES orders (orderId),
     FOREIGN KEY (productId) REFERENCES product (productId)
 );
+
+CREATE TABLE member (
+    memberId INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    pdiscount DECIMAL(10,2),
+    cdiscount DECIMAL(10,2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE member_product (
+    memberId VARCHAR(50),
+    productId INT,
+    price DECIMAL(10,2),
+    discount DECIMAL(10,2),
+    PRIMARY KEY (memberId, productId),
+    FOREIGN KEY (memberId) REFERENCES member(memberId),
+    FOREIGN KEY (productId) REFERENCES product(productId),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);

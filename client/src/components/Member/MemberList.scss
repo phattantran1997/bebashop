@@ -1,0 +1,72 @@
+/* AdminmemberList.scss */
+
+.member-list-container {
+    // max-width: 800px;
+    // margin: 0 auto;
+    // padding: 20px;
+}
+
+.add-member-section {
+    margin-bottom: 20px;
+}
+
+.add-member-section label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.add-member-section input {
+    width: calc(100% - 10px);
+    /* Adjust width as needed */
+    padding: 8px;
+    margin-bottom: 10px;
+}
+
+.add-member-section button {
+    padding: 8px 16px;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.add-member-section button:hover {
+    background-color: #45a049;
+}
+
+.member-list table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.member-list th,
+.member-list td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.member-list th {
+    background-color: #f2f2f2;
+}
+
+.member-list tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+.member-list tr:hover {
+    background-color: #ddd;
+}
+
+.member-list button {
+    padding: 8px 16px;
+    background-color: #f44336;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.member-list button:hover {
+    background-color: #d32f2f;
+}
