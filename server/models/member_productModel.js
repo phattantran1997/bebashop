@@ -1,122 +1,133 @@
-const pool = require("../database/connection");
+const mongoose = require('mongoose');
 
-exports.getAllMemberProducts = () => {
-    return new Promise((resolve, reject) => {
-        const query = `
-            SELECT 
-               mp.*, m.name as memberName,p.name as productName, p.description,
-                p.price as originalPrice, mp.price as memberPrice,
-                mp.discount as memberDiscount
-            FROM 
-                member_product mp
-            INNER JOIN 
-                member m ON mp.memberId = m.memberId
-            INNER JOIN 
-                product p ON mp.productId = p.productId
-        `;
-        pool.query(query, (err, result) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(result);
-            }
+const memberProductSchema = new mongoose.Schema({
+    member: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Member',
+        required: true
+    },
+    product: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Product',
+        required: true
+    },
+    discountPercentage: {
+        type: Number,
+        required: true,
+        min: 0,
+        max: 100,
+        default: 0
+    },
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+    validFrom: {
+        type: Date,
+        default: Date.now
+    },
+    validUntil: {
+        type: Date
+    },
+    specialNotes: {
+        type: String
+    }
+}, {
+    timestamps: true
+});
+
+// Compound index to ensure unique member-product combinations
+memberProductSchema.index({ member: 1, product: 1 }, { unique: true });
+
+const MemberProduct = mongoose.model('MemberProduct', memberProductSchema);
+
+exports.addProductToMember = async (memberProductData) => {
+    try {
+        const memberProduct = await MemberProduct.create(memberProductData);
+        return memberProduct;
+    } catch (error) {
+        throw error;
+    }
+};
+
+exports.getMemberProducts = async (memberId) => {
+    try {
+        const memberProducts = await MemberProduct.find({ member: memberId })
+            .populate('product', 'name price description')
+            .populate('member', 'membershipType');
+        return memberProducts;
+    } catch (error) {
+        throw error;
+    }
+};
+
+exports.getProductMembers = async (productId) => {
+    try {
+        const productMembers = await MemberProduct.find({ product: productId })
+            .populate('member')
+            .populate('product', 'name price');
+        return productMembers;
+    } catch (error) {
+        throw error;
+    }
+};
+
+exports.updateMemberProduct = async (memberId, productId, updateData) => {
+    try {
+        const memberProduct = await MemberProduct.findOneAndUpdate(
+            { member: memberId, product: productId },
+            updateData,
+            { new: true, runValidators: true }
+        )
+        .populate('product', 'name price description')
+        .populate('member', 'membershipType');
+
+        if (!memberProduct) {
+            throw new Error('Member product relationship not found');
+        }
+
+        return memberProduct;
+    } catch (error) {
+        throw error;
+    }
+};
+
+exports.removeMemberProduct = async (memberId, productId) => {
+    try {
+        const memberProduct = await MemberProduct.findOneAndDelete({
+            member: memberId,
+            product: productId
         });
-    });
+
+        if (!memberProduct) {
+            throw new Error('Member product relationship not found');
+        }
+
+        return memberProduct;
+    } catch (error) {
+        throw error;
+    }
 };
 
-exports.getMemberProductsByMemberId = (memberId) => {
-    return new Promise((resolve, reject) => {
-        const query = `
-            SELECT 
-                mp.*, m.name as memberName,p.name as productName, p.description,
-                p.price as originalPrice, mp.price as memberPrice,
-                mp.discount as memberDiscount
-            FROM 
-                member_product mp
-            INNER JOIN 
-                product p ON mp.productId = p.productId
-            INNER JOIN 
-                member m ON mp.memberId = m.memberId
-            WHERE 
-                mp.memberId = ?
-        `;
-        pool.query(query, [memberId], (err, result) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(result);
-            }
-        });
-    });
+exports.getActiveDiscounts = async (memberId) => {
+    try {
+        const now = new Date();
+        const activeDiscounts = await MemberProduct.find({
+            member: memberId,
+            isActive: true,
+            validFrom: { $lte: now },
+            $or: [
+                { validUntil: { $gt: now } },
+                { validUntil: null }
+            ]
+        })
+        .populate('product', 'name price description')
+        .populate('member', 'membershipType');
+
+        return activeDiscounts;
+    } catch (error) {
+        throw error;
+    }
 };
 
-exports.getMemberProductsByProductId = (productId) => {
-    return new Promise((resolve, reject) => {
-        const query = `
-            SELECT 
-                mp.*, m.name as memberName, m.description as memberDescription,
-                mp.price as memberPrice, mp.discount as memberDiscount
-            FROM 
-                member_product mp
-            INNER JOIN 
-                member m ON mp.memberId = m.memberId
-            WHERE 
-                mp.productId = ?
-        `;
-        pool.query(query, [productId], (err, result) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(result);
-            }
-        });
-    });
-};
-
-exports.createMemberProduct = (memberId, productId, price, discount) => {
-    return new Promise((resolve, reject) => {
-        pool.query(
-            "INSERT INTO member_product (memberId, productId, price, discount) VALUES (?, ?, ?, ?);",
-            [memberId, productId, price, discount],
-            (err, result) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(result);
-                }
-            }
-        );
-    });
-};
-
-exports.updateMemberProduct = (memberId, productId, price, discount) => {
-    return new Promise((resolve, reject) => {
-        pool.query(
-            "UPDATE member_product SET price = ?, discount = ? WHERE memberId = ? AND productId = ?",
-            [price, discount, memberId, productId],
-            (err, result) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(result);
-                }
-            }
-        );
-    });
-};
-
-exports.deleteMemberProduct = (memberId, productId) => {
-    return new Promise((resolve, reject) => {
-        pool.query(
-            "DELETE FROM member_product WHERE memberId = ? AND productId = ?",
-            [memberId, productId],
-            (err, result) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(result);
-                }
-            }
-        );
-    });
-};
+module.exports.MemberProduct = MemberProduct;

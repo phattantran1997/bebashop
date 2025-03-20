@@ -8,6 +8,7 @@ function Register(props) {
   let [fname, setFname] = useState("");
   let [lname, setLname] = useState("");
   let [pass, setPass] = useState("");
+  let [phone, setPhone] = useState("");
   const [isAdmin, setAdmin] = useState("0");
   const [error, setError] = useState("");
 
@@ -19,6 +20,7 @@ function Register(props) {
         isAdmin: isAdmin,
         fname: fname,
         lname: lname,
+        phone: isAdmin === "0" ? phone : undefined,
       };
 
       let url = `${getBaseURL()}api/users/register`;
@@ -30,7 +32,7 @@ function Register(props) {
             props.navigateToLoginPage();
           }
         })
-        .catch((err) => console.log("Sorry unable to add new user"));
+        .catch((err) => console.log("Sorry, unable to add new user"));
     }
   };
 
@@ -55,6 +57,9 @@ function Register(props) {
       return false;
     } else if (!validatePassword(pass)) {
       setError("Password must be at least 6 characters long.");
+      return false;
+    } else if (isAdmin === "0" && phone.trim() === "") {
+      setError("Please provide your phone number.");
       return false;
     }
     setError("");
@@ -92,6 +97,16 @@ function Register(props) {
           onChange={(e) => setLname(e.target.value)}
         ></input>
       </div>
+      {isAdmin === "0" && (
+        <div>
+          <label>Phone Number</label>
+          <input
+            type="text"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          ></input>
+        </div>
+      )}
       <div>
         <label>Password</label>
         <input

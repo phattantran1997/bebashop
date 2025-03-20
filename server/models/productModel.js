@@ -1,108 +1,97 @@
 // productModel.js
 
-const pool = require("../database/connection");
+const mongoose = require('mongoose');
 
-exports.getAllProducts = () => {
-    return new Promise((resolve, reject) => {
-        // Join products with product_images based on productId
-        const query = `
-            SELECT 
-                p.*, 
-                pi.imageUrl 
-            FROM 
-                product p
-            LEFT JOIN 
-                product_images pi 
-            ON 
-                p.productId = pi.productId;
-        `;
-        
-        pool.query(query, (err, result) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(result);
-            }
-        });
-    });
+const productSchema = new mongoose.Schema({
+    name: {
+        type: String,
+        required: true,
+        trim: true
+    },
+    description: {
+        type: String,
+        required: true
+    },
+    price: {
+        type: Number,
+        required: true,
+        min: 0
+    },
+    stock: {
+        type: Number,
+        required: true,
+        min: 0,
+        default: 0
+    },
+    category: {
+        type: String,
+        required: true
+    },
+    imageUrl: {
+        type: String
+    }
+}, {
+    timestamps: true
+});
+
+const Product = mongoose.model('Product', productSchema);
+
+exports.createProduct = async (productData) => {
+    try {
+        const product = await Product.create(productData);
+        return product;
+    } catch (error) {
+        throw error;
+    }
 };
 
-
-
-exports.getProductDetailsById = (productId) => {
-    return new Promise((resolve, reject) => {
-        const query =
-            "SELECT * FROM product WHERE productId = ?";
-        pool.query(query, [productId], (err, result) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(result);
-            }
-        });
-    });
+exports.getAllProducts = async () => {
+    try {
+        const products = await Product.find({});
+        return products;
+    } catch (error) {
+        throw error;
+    }
 };
 
-exports.allOrderByProductId = (productId) => {
-    return new Promise((resolve, reject) => {
-        const query =
-            "SELECT O.orderId, U.fname, U.lname, O.createdDate, PIN.quantity, PIN.totalPrice " +
-            "FROM users U INNER JOIN orders O on U.userId  = O.userId " +
-            "INNER JOIN productsInOrder PIN on O.orderId = PIN.orderId " +
-            "INNER JOIN product P on PIN.productId = P.productId " +
-            "WHERE PIN.productId = ?;";
-
-        pool.query(query, [productId], (err, result) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(result);
-            }
-        });
-    });
+exports.getProductById = async (productId) => {
+    try {
+        const product = await Product.findById(productId);
+        if (!product) {
+            throw new Error('Product not found');
+        }
+        return product;
+    } catch (error) {
+        throw error;
+    }
 };
 
-
-exports.createProduct = (name, price, description) => {
-    return new Promise((resolve, reject) => {
-        pool.query(
-            "INSERT INTO product (name, price, description) VALUES (?,?,?);",
-            [name, price, description],
-            (err, result) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(result);
-                }
-            }
+exports.updateProduct = async (productId, updateData) => {
+    try {
+        const product = await Product.findByIdAndUpdate(
+            productId,
+            updateData,
+            { new: true, runValidators: true }
         );
-    });
+        if (!product) {
+            throw new Error('Product not found');
+        }
+        return product;
+    } catch (error) {
+        throw error;
+    }
 };
 
-exports.updateProduct = (productId, name, price, description) => {
-    return new Promise((resolve, reject) => {
-        pool.query(
-            "UPDATE product SET name = ?, price = ?, description = ? WHERE productId = ?",
-            [name, price, description, productId],
-            (err, result) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(result);
-                }
-            }
-        );
-    });
+exports.deleteProduct = async (productId) => {
+    try {
+        const product = await Product.findByIdAndDelete(productId);
+        if (!product) {
+            throw new Error('Product not found');
+        }
+        return product;
+    } catch (error) {
+        throw error;
+    }
 };
 
-exports.deleteProduct = (productId) => {
-    return new Promise((resolve, reject) => {
-        pool.query("DELETE FROM product WHERE productId = ?", [productId], (err, result) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(result);
-            }
-        });
-    });
-};
+module.exports.Product = Product;

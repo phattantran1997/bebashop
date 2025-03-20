@@ -1,123 +1,175 @@
 // cartModel.js
 
-const pool = require("../database/connection");
+const mongoose = require('mongoose');
 
-exports.getShoppingCart = (userId) => {
-    return new Promise((resolve, reject) => {
-        pool.query(
-            "SELECT S.quantity, P.name, P.price, P.productId FROM shopingCart S INNER JOIN product P ON S.productId = P.productId WHERE S.userId = ?",
-            [userId],
-            (err, result) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(result);
-                }
-            }
-        );
-    });
-};
+const cartItemSchema = new mongoose.Schema({
+    product: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Product',
+        required: true
+    },
+    quantity: {
+        type: Number,
+        required: true,
+        min: 1,
+        default: 1
+    },
+    price: {
+        type: Number,
+        required: true,
+        min: 0
+    }
+});
 
-exports.addToCart = (customerId, productId, quantity, isPresent) => {
-    return new Promise((resolve, reject) => {
-        if (isPresent) {
-            pool.query(
-                "UPDATE shopingCart SET quantity = quantity + ? WHERE productId = ? AND userId = ?",
-                [quantity, productId, customerId],
-                (err, result) => {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        resolve(result);
-                    }
-                }
-            );
-        } else {
-            pool.query(
-                "INSERT INTO shopingCart (userId, productId, quantity) VALUES (?, ?, ?)",
-                [customerId, productId, quantity],
-                (err, result) => {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        resolve(result);
-                    }
-                }
-            );
+const cartSchema = new mongoose.Schema({
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+        unique: true
+    },
+    items: [cartItemSchema],
+    totalAmount: {
+        type: Number,
+        required: true,
+        default: 0,
+        min: 0
+    }
+}, {
+    timestamps: true
+});
+
+// Calculate total amount before saving
+cartSchema.pre('save', function(next) {
+    this.totalAmount = this.items.reduce((total, item) => {
+        return total + (item.price * item.quantity);
+    }, 0);
+    next();
+});
+
+const Cart = mongoose.model('Cart', cartSchema);
+
+exports.getCart = async (userId) => {
+    try {
+        let cart = await Cart.findOne({ user: userId })
+            .populate('items.product', 'name description imageUrl');
+        
+        if (!cart) {
+            cart = await Cart.create({
+                user: userId,
+                items: [],
+                totalAmount: 0
+            });
         }
-    });
+        
+        return cart;
+    } catch (error) {
+        throw error;
+    }
 };
 
-exports.removeFromCart = (productId, userId) => {
-    return new Promise((resolve, reject) => {
-        pool.query(
-            "DELETE FROM shopingCart WHERE productId = ? AND userId = ?",
-            [productId, userId],
-            (err, result) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(result);
-                }
-            }
+exports.addToCart = async (userId, productId, quantity, price) => {
+    try {
+        let cart = await Cart.findOne({ user: userId });
+        
+        if (!cart) {
+            cart = new Cart({
+                user: userId,
+                items: [],
+                totalAmount: 0
+            });
+        }
+
+        const existingItemIndex = cart.items.findIndex(
+            item => item.product.toString() === productId
         );
-    });
+
+        if (existingItemIndex > -1) {
+            // Update existing item
+            cart.items[existingItemIndex].quantity += quantity;
+        } else {
+            // Add new item
+            cart.items.push({
+                product: productId,
+                quantity,
+                price
+            });
+        }
+
+        // Save will trigger the pre-save hook to calculate totalAmount
+        await cart.save();
+        
+        return cart;
+    } catch (error) {
+        throw error;
+    }
 };
 
-exports.buy = (customerId, address) => {
-    return new Promise((resolve, reject) => {
-        // Create order
-        pool.query(
-            "INSERT INTO orders (userId, address) VALUES (?, ?);",
-            [customerId, address],
-            (err, orderResult) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    // Move items from shopping cart to products in order
-                    pool.query(
-                        "INSERT INTO productsInOrder (orderId, productId, quantity, totalPrice) " +
-                        "SELECT (SELECT max(orderId) FROM orders WHERE userId = ?), S.productId, S.quantity, P.price * S.quantity " +
-                        "FROM shopingCart S INNER JOIN product P ON S.productId = P.productId " +
-                        "WHERE S.userId = ?;",
-                        [customerId, customerId],
-                        (err, productsResult) => {
-                            if (err) {
-                                reject(err);
-                            } else {
-                                // Update total price in order table
-                                pool.query(
-                                    "UPDATE orders O " +
-                                    "SET totalPrice = (SELECT SUM(P.totalPrice) " +
-                                    "FROM productsInOrder P " +
-                                    "WHERE O.orderId = P.orderId " +
-                                    "GROUP BY O.orderId) " +
-                                    "WHERE userId = ? AND totalPrice IS NULL;",
-                                    customerId,
-                                    (err, totalPriceResult) => {
-                                        if (err) {
-                                            reject(err);
-                                        } else {
-                                            // Clear shopping cart
-                                            pool.query(
-                                                "DELETE FROM shopingCart WHERE userId = ?;",
-                                                customerId,
-                                                (err, clearCartResult) => {
-                                                    if (err) {
-                                                        reject(err);
-                                                    } else {
-                                                        resolve({ orderResult, productsResult, totalPriceResult, clearCartResult });
-                                                    }
-                                                }
-                                            );
-                                        }
-                                    }
-                                );
-                            }
-                        }
-                    );
-                }
-            }
+exports.updateCartItem = async (userId, productId, quantity) => {
+    try {
+        const cart = await Cart.findOne({ user: userId });
+        
+        if (!cart) {
+            throw new Error('Cart not found');
+        }
+
+        const itemIndex = cart.items.findIndex(
+            item => item.product.toString() === productId
         );
-    });
+
+        if (itemIndex === -1) {
+            throw new Error('Product not found in cart');
+        }
+
+        if (quantity <= 0) {
+            // Remove item if quantity is 0 or negative
+            cart.items.splice(itemIndex, 1);
+        } else {
+            cart.items[itemIndex].quantity = quantity;
+        }
+
+        await cart.save();
+        return cart;
+    } catch (error) {
+        throw error;
+    }
 };
+
+exports.removeFromCart = async (userId, productId) => {
+    try {
+        const cart = await Cart.findOne({ user: userId });
+        
+        if (!cart) {
+            throw new Error('Cart not found');
+        }
+
+        cart.items = cart.items.filter(
+            item => item.product.toString() !== productId
+        );
+
+        await cart.save();
+        return cart;
+    } catch (error) {
+        throw error;
+    }
+};
+
+exports.clearCart = async (userId) => {
+    try {
+        const cart = await Cart.findOne({ user: userId });
+        
+        if (!cart) {
+            throw new Error('Cart not found');
+        }
+
+        cart.items = [];
+        cart.totalAmount = 0;
+        
+        await cart.save();
+        return cart;
+    } catch (error) {
+        throw error;
+    }
+};
+
+module.exports.Cart = Cart;

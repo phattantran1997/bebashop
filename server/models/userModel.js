@@ -1,149 +1,128 @@
 // userModel.js
 
-const pool = require("../database/connection");
+const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const { generateAccessAndRefreshToken, refreshToken } = require('../utils/token'); 
+const { generateAccessAndRefreshToken } = require('../utils/token');
 
+const userSchema = new mongoose.Schema({
+    email: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true
+    },
+    password: {
+        type: String,
+        required: true
+    },
+    isAdmin: {
+        type: Boolean,
+        default: false
+    },
+    fname: {
+        type: String,
+        required: true
+    },
+    lname: {
+        type: String,
+        required: true
+    },
+    phoneNumber: {
+        type: String,
+        unique: true,
+        sparse: true
+    }
+}, {
+    timestamps: true
+});
 
-exports.register = (email, password, isAdmin, fname, lname) => {
-    return new Promise((resolve, reject) => {
-        // First, check if the user with the provided email already exists
-        pool.query(
-            "SELECT * FROM users WHERE email = ?",
-            [email],
-            (err, results) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    if (results.length > 0) {
-                        // User with this email already exists
-                        reject(new Error("User already exists"));
-                    } else {
-                        // User does not exist, proceed with registration
-                        // Hash the password before storing it
-                        bcrypt.hash(password, 10, (hashErr, hashedPassword) => {
-                            if (hashErr) {
-                                reject(hashErr);
-                            } else {
-                                // Truncate hashed password to fit into VARCHAR(15) column
-                                // const truncatedHashedPassword = hashedPassword.substring(0, 15);
-                                pool.query(
-                                    "INSERT INTO users (email, password, isAdmin, fname, lname) VALUES (?,?,?,?,?);",
-                                    [email, hashedPassword, isAdmin, fname, lname],
-                                    (insertErr, result) => {
-                                        if (insertErr) {
-                                            reject(insertErr);
-                                        } else {
-                                            resolve(result);
-                                        }
-                                    }
-                                );
-                            }
-                        });
-                    }
-                }
-            }
-        );
-    });
+// Hash password before saving
+userSchema.pre('save', async function(next) {
+    if (!this.isModified('password')) return next();
+    this.password = await bcrypt.hash(this.password, 10);
+    next();
+});
+
+const User = mongoose.model('User', userSchema);
+
+exports.register = async (email, password, isAdmin, fname, lname) => {
+    try {
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            throw new Error("User already exists");
+        }
+        
+        const user = await User.create({
+            email,
+            password,
+            isAdmin,
+            fname,
+            lname
+        });
+        
+        return user;
+    } catch (error) {
+        throw error;
+    }
 };
 
+exports.login = async (email, password) => {
+    try {
+        const user = await User.findOne({ email });
+        if (!user) {
+            throw new Error("Invalid email or password");
+        }
 
-exports.login = (email, password) => {
-    return new Promise((resolve, reject) => {
-        pool.query(
-            "SELECT userId, password, isAdmin FROM users WHERE email = ?;",
-            [email],
-            (err, result) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    if (result.length === 0) {
-                        // No user found with the provided email
-                        reject(new Error("Invalid email or password"));
-                    } else {
-                        const storedHashedPassword = result[0].password;
-                        // Compare the provided password with the stored hashed password
-                        bcrypt.compare(password, storedHashedPassword, (compareErr, isMatch) => {
-                            if (compareErr) {
-                                reject(compareErr);
-                            } else if (!isMatch) {
-                                // Passwords do not match
-                                reject(new Error("Invalid email or password"));
-                            } else {
-                                // Passwords match, authenticate the user
-                                let userData = {
-                                    userId: result[0].userId,
-                                    isAdmin: result[0].isAdmin,
-                                }
-                                const {token, refreshToken} = generateAccessAndRefreshToken(userData);
-                                userData.token = token;
-                                // if refresh token gives cros error avoid passing refresh token in cookies & pass as nrml param
-                                userData.refreshToken = refreshToken;
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            throw new Error("Invalid email or password");
+        }
 
-                                // res.cookie('jwt', refreshToken, {
-                                //     httpOnly: true,
-                                //     sameSite: 'None', secure: true,
-                                //     maxAge: 24 * 60 * 60 * 1000
-                                // });
+        const userData = {
+            userId: user._id,
+            isAdmin: user.isAdmin
+        };
 
-                                let response = [userData]
-                                resolve(response);
-                            }
-                        });
-                    }
-                }
-            }
-        );
-    });
+        const { token, refreshToken } = generateAccessAndRefreshToken(userData);
+        userData.token = token;
+        userData.refreshToken = refreshToken;
+
+        return [userData];
+    } catch (error) {
+        throw error;
+    }
 };
 
+exports.loginByPhoneNumber = async (phoneNumber) => {
+    try {
+        const user = await User.findOne({ phoneNumber });
+        if (!user) {
+            throw new Error("Invalid phone number");
+        }
 
+        const userData = {
+            userId: user._id,
+            isAdmin: user.isAdmin,
+            phoneNumber: user.phoneNumber
+        };
 
-exports.loginByPhoneNumber = (phoneNumber) => {
-    return new Promise((resolve, reject) => {
-        pool.query(
-            "SELECT userId, isAdmin, phoneNumber FROM users WHERE phoneNumber = ?;",
-            [phoneNumber],
-            (err, result) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    if (result.length === 0) {
-                        // No user found with the provided phone number
-                        reject(new Error("Invalid phone number"));
-                    } else {
-                        // User found, return user data
-                        let userData = {
-                            userId: result[0].userId,
-                            isAdmin: result[0].isAdmin,
-                            phoneNumber: result[0].phoneNumber
-                        };
+        const { token, refreshToken } = generateAccessAndRefreshToken(userData);
+        userData.token = token;
+        userData.refreshToken = refreshToken;
 
-                        // Generate tokens for the authenticated user
-                        const { token, refreshToken } = generateAccessAndRefreshToken(userData);
-                        userData.token = token;
-                        userData.refreshToken = refreshToken;
-
-                        let response = [userData];
-                        resolve(response);
-                    }
-                }
-            }
-        );
-    });
+        return [userData];
+    } catch (error) {
+        throw error;
+    }
 };
 
-exports.getAllUsers = () => {
-    return new Promise((resolve, reject) => {
-        pool.query(
-            "SELECT userId, email, isAdmin, fname, lname, phoneNumber FROM users",
-            (err, results) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(results);
-                }
-            }
-        );
-    });
+exports.getAllUsers = async () => {
+    try {
+        const users = await User.find({}, '-password');
+        return users;
+    } catch (error) {
+        throw error;
+    }
 };
+
+module.exports.User = User;

@@ -1,23 +1,16 @@
 // database/connection.js
-const mysql2 = require("mysql2");
-require('dotenv').config(); // Load environment variables from .env file
+const mongoose = require('mongoose');
+require('dotenv').config();
 
-
-let connectionParams = {
-    user: process.env.DB_SERVER_USER,
-    host: process.env.DB_SERVER_HOST,
-    password: process.env.DB_SERVER_PASSWORD,
-    database: process.env.DB_SERVER_DATABASE,
+const connectDB = async () => {
+    try {
+        const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/ecommerce');
+        console.log(`MongoDB Connected: ${conn.connection.host}`);
+    } catch (error) {
+        console.error(`Error: ${error.message}`);
+        process.exit(1);
+    }
 };
 
-
-const pool = mysql2.createConnection(connectionParams);
-
-pool.connect((err) => {
-    if (err) console.log(err.message);
-    else console.log("DB Connection Done")
-});
-
-// Export the pool
-module.exports = pool;
+module.exports = connectDB;
 
